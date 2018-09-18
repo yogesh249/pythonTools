@@ -11,5 +11,5 @@ soup = bs4.BeautifulSoup(res.text, features="html.parser")
 # TODO: Open a browser tab for each result.
 linkElems = soup.select('div #NewHide > table > tr > td')
 
-print(linkElems[1].getText().strip())
+print(linkElems[1].getText().strip()) 
 
