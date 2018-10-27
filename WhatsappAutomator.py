@@ -9,6 +9,8 @@ import time
   
 # Replace below path with the absolute path 
 # to chromedriver in your computer 
+# chrome driver version 2.43 has a problem. 
+# But version 2.42 works fine.
 driver = webdriver.Chrome('D:\\Software\\chromedriver_win32\\chromedriver.exe')
   
 driver.get("https://web.whatsapp.com/") 
@@ -16,14 +18,12 @@ wait = WebDriverWait(driver, 600)
   
 # Replace 'Friend's Name' with the name of your friend  
 # or the name of a group. This has to be within '" and "'
-target = '"vaibhav Garg"'
-  
+target = '"Wife"'
 # Replace the below string with your own message 
 string = "Message sent using Python!!!"
 # locate your friend...
 x_arg = '//span[contains(@title,' + target + ')]'
-group_title = wait.until(EC.presence_of_element_located(( 
-    By.XPATH, x_arg))) 
+group_title = wait.until(EC.presence_of_element_located((By.XPATH, x_arg))) 
 group_title.click() 
 # This is not working with //div[@dir="selectable-text"], it is working with [@dir="ltr"]
 inp_xpath = '//div[@dir="ltr"][@data-tab="1"]'
