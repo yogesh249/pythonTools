@@ -1,9 +1,9 @@
 import json
 import requests
+#import matplotlib.pyplot as plt
 urlnse='https://www.nseindia.com'
-url='https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY&expiryDate=05-Nov-2020'
+url='https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY&expiryDate=29-Oct-2020'
 
-print('Hello, world!')
 def fetch_oi():
     
     s = requests.Session()
@@ -25,12 +25,35 @@ def fetch_oi():
     StringJson=response.content.decode('utf-8')
    
     final_dictionary = json.loads(StringJson) 
+
+    #filter Puts for last 500 points below current nifty
     
-    print(final_dictionary['filtered']['data'])
     
+    putOiMap=filterPutsUpto500Points(final_dictionary)
+    print(putOiMap)
+
+    totalOi=calculateTotalOi(putOiMap)
+    print(totalOi)
     with open("oidata.json", "w") as files:
-        files.write(json.dumps(final_dictionary['filtered']['data'], indent=4, sort_keys = True))
-    
+        files.write(json.dumps(putOiMap, indent=4, sort_keys = True))
+        
+def filterPutsUpto500Points(final_dictionary):
+    putOiArrayData=[]
+    putOiMap={}
+    i=0
+    for obj in final_dictionary['filtered']['data']:
+        if(int(obj['PE']['underlyingValue']-500)<int(obj['PE']['strikePrice']) and int(obj['PE']['underlyingValue'])>int(obj['PE']['strikePrice'])):
+            putOiArrayData.append(obj['PE'])
+    print('Now priting the map')
+    putOiMap['data']=putOiArrayData
+    return putOiMap
+
+def calculateTotalOi(putOiMap):
+    oi=0
+    for obj in putOiMap['data']:
+          print('oi = ', obj['openInterest'])
+          oi=oi+int(obj['openInterest'])
+    return oi
 def main():
    
     fetch_oi()
