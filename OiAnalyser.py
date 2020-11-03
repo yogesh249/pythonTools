@@ -10,11 +10,12 @@ from datetime import datetime
 import time
 import logging
 import threading
+expiryDate='05-Nov-2020'
 urlnse='https://www.nseindia.com'
 url='https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY&expiryDate=05-Nov-2020'
 dateformat='%Y.%m.%d %H:%M:%S' 
 
-def fetch_oi():
+def fetch_oi(cepe):
     s = requests.Session()
     # These 4 headers are required to connect to nseindia url.
     s.headers.update({'referer': 'https://www.nseindia.com/get-quotes/derivatives?symbol=NIFTY&identifier=OPTIDXNIFTY29-10-2020CE12000.00'})
@@ -30,34 +31,42 @@ def fetch_oi():
     yar = []
     
     while True:
-        totalOi=calculateTotalOi(s)
+        totalOi=calculateTotalOi(s, cepe)
         current_time=getCurrentTime()
         
-        with open("oidata.json", "a+") as files:
+        with open(expiryDate+'-'+cepe+'.json', "a+") as files:
             files.write(current_time)
             files.write(',')
             files.write(str(totalOi))
             files.write('\n')
         files.close()
-        
-        #graphRawFX()
         time.sleep(60)
     print('Exiting the loop')
         
-def filterPutsUpto500Points(final_dictionary):
-    putOiArrayData=[]
-    putOiMap={}
+def filterPutsUpto500Points(final_dictionary, cepe):
+    oiArrayData=[]
+    OiMap={}
    
     i=0
     for obj in final_dictionary['filtered']['data']:
-        
-        if(int(obj['PE']['underlyingValue']-500)<int(obj['PE']['strikePrice']) and int(obj['PE']['underlyingValue'])>int(obj['PE']['strikePrice'])):
-            putOiArrayData.append(obj['PE'])
+        if(cepe=='pe'):
+            #if underlyingValue lies between strikePrice-500 and strikePrice
+            if(int(obj['PE']['strikePrice'])<=int(obj['PE']['underlyingValue'])<=int(obj['PE']['strikePrice']+500)):
+                
+                oiArrayData.append(obj['PE'])
+        elif (cepe=='ce'):
+            #if underlyingValue lies between strikePrice and strikePrice+500
+            if(int(obj['CE']['underlyingValue'])<=int(obj['CE']['strikePrice'])
+                and int(obj['CE']['strikePrice']-500) <=int(obj['CE']['underlyingValue'])):
+                    print('Adding to arrayData')
+                    print('strikePrice=',obj['CE']['strikePrice'])
+                    print('underlyingValue=',obj['CE']['underlyingValue'])
+                    oiArrayData.append(obj['CE'])
     print('Now priting the map')
-    putOiMap['data']=putOiArrayData
-    return putOiMap
+    OiMap['data']=oiArrayData
+    return OiMap
 
-def calculateTotalOi(s):
+def calculateTotalOi(s, cepe):
     oi=0
     #Now get the JSON from the URL.
     response=s.get(url)
@@ -68,7 +77,7 @@ def calculateTotalOi(s):
     StringJson=response.content.decode('utf-8')
     final_dictionary = json.loads(StringJson) 
     #filter Puts for last 500 points below current nifty
-    putOiMap=filterPutsUpto500Points(final_dictionary)
+    putOiMap=filterPutsUpto500Points(final_dictionary, cepe)
     #print(putOiMap)
     for obj in putOiMap['data']:
           print('oi = ', obj['openInterest'])
@@ -81,7 +90,7 @@ def getCurrentTime():
     print("Current Time =", current_time)
     return current_time  
 def animate(i):
-    graph_data = open('oidata.json','r').read()
+    graph_data = open(expiryDate+'-pe.json','r').read()
     lines = graph_data.split('\n')
     xs = []
     ys = []
@@ -91,13 +100,27 @@ def animate(i):
             xs.append(datetime.strptime(x, dateformat))
             ys.append(y)
     ax1.clear()
-    ax1.plot(xs, ys)
+    
+    graph_data2 = open(expiryDate+'-ce.json','r').read()
+    lines2 = graph_data2.split('\n')
+    xs2 = []
+    ys2 = []
+    for line2 in lines2:
+        if len(line2) > 1:
+            x2, y2 = line2.split(',')
+            xs2.append(datetime.strptime(x2, dateformat))
+            ys2.append(y2)
+    ax1.plot(xs, ys, label = 'PE', color="green")
+    ax1.plot(xs2, ys2, label = 'CE', color="red")
 fig = plt.figure()
 ax1 = fig.add_subplot(1,1,1)
 def main():
     print('Starting the main function')
-    x = threading.Thread(target=fetch_oi, args=())
+    x = threading.Thread(target=fetch_oi, args=('ce',))
     x.start()
+    
+    y = threading.Thread(target=fetch_oi, args=('pe',))
+    y.start()
     ani = animation.FuncAnimation(fig, animate, interval=1000)
     plt.show()
     print('Starting the main function2')
